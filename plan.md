@@ -29,7 +29,7 @@ Every decision is made by our own Python code, step by step.
 | --- | --- | --- |
 | Frontend | **Plain HTML + CSS + JavaScript** (no React or Next.js) | Simple, no build step, no `npm install`. You asked for a simple UI. |
 | Backend | **Python 3 + Flask** | Lightweight REST API. |
-| Dataset | **JSON file** (75 movies, 7 languages) | Human-readable knowledge base. |
+| Dataset | **JSON file**: 10,000 real movies, 32 languages (IMDb + Wikidata, built by `build_dataset.py`) | Human-readable knowledge base, big enough for real recommendations. |
 | Communication | **REST API (JSON)** | `fetch()` from browser → Flask. |
 | Hosting | Flask serves the UI too | One command runs everything: `python app.py`. |
 | Tests | Python `unittest` (built in) | No extra installs. |
@@ -80,7 +80,7 @@ User preferences
       │
       ▼
 ⑥ Best-first selection  push all candidates into a priority queue, pop the best 5
-                        priority = (score, fewest broken rules, rating)
+                        priority = (score, fewest broken rules, weighted rating)
       │
       ▼
 ⑦ Explanation           turn each scoring rule that fired into a plain-English reason
@@ -136,7 +136,8 @@ Weights live in one dictionary (`WEIGHTS` in `heuristic.py`), so they are easy t
 
 - **Best-first selection:** all scored movies go into a priority queue (`heapq`).
   The movie with the best priority is popped first. We pop 5 times.
-- **Priority** = (higher score, fewer broken rules, higher rating, title A–Z).
+- **Priority** = (higher score, fewer broken rules, higher weighted rating, title A–Z).
+  The weighted rating is IMDb's formula `v/(v+m)·R + m/(v+m)·C`, so a rating backed by many votes wins ties.
   On equal scores, a movie that obeys every rule beats one admitted by relaxation.
 - **Constraint relaxation:** if the user's filters are too strict (fewer than 5 movies),
   the system does not return an empty page. It relaxes one rule at a time and says
@@ -190,16 +191,22 @@ ai project/
 │   ├── app.py              ← Flask app + REST API + serves frontend
 │   ├── knowledge_base.py   ← loads movies, semantic network
 │   ├── rule_engine.py      ← forward chaining + constraint rules
-│   ├── heuristic.py        ← weighted scoring function
+│   ├── heuristic.py        ← weighted scoring function + weighted rating
 │   ├── recommender.py      ← full pipeline, relaxation, best-first selection, explanations
-│   ├── test_recommender.py ← unit tests
+│   ├── build_dataset.py    ← builds movies.json from IMDb + Wikidata (run once)
 │   ├── requirements.txt
 │   └── data/
-│       └── movies.json     ← knowledge base (75 movies)
-└── frontend/
-    ├── index.html
-    ├── style.css
-    └── script.js
+│       ├── movies.json         ← knowledge base (10,000 movies)
+│       └── curated_movies.json ← 75 hand-tagged movies
+├── frontend/
+│   ├── index.html
+│   ├── style.css
+│   └── script.js
+└── tests/                  ← all tests, one file per module
+    ├── run_tests.py        ← runs every test (python tests/run_tests.py)
+    ├── run_tests.bat       ← double-click version for Windows
+    ├── helpers.py          ← shared setup
+    └── test_*.py           ← knowledge_base, rule_engine, heuristic, recommender, api
 ```
 
 ---
@@ -209,7 +216,7 @@ ai project/
 | # | Milestone | Done when |
 | --- | --- | --- |
 | 1 | Plan | this file written |
-| 2 | Knowledge base | `movies.json` with 75 movies + semantic network |
+| 2 | Knowledge base | `movies.json` with 75 movies + semantic network (expanded to 10,000 in milestone 10) |
 | 3 | Rule engine | forward chaining + constraint rules return a trace |
 | 4 | Heuristic | score 0–100 with breakdown and reasons |
 | 5 | Recommender pipeline | relaxation + best-first top-5 + explanations |
@@ -217,6 +224,7 @@ ai project/
 | 7 | Frontend | form, cards, trace panel, KB table, responsive |
 | 8 | Testing | unit tests pass + manual API checks + UI check |
 | 9 | Docs | README with setup + algorithm explanation |
+| 10 | Large dataset | 10,000 real movies from IMDb + Wikidata, searchable table, weighted-rating tie-break |
 
 ---
 

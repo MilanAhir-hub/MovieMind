@@ -6,7 +6,7 @@ and best-first selection. It does not use machine learning, neural networks or a
 
 - Backend: Python + Flask (REST API)
 - Frontend: plain HTML + CSS + JavaScript (no React, no build step)
-- Knowledge base: `backend/data/movies.json` (75 movies, 7 languages)
+- Knowledge base: `backend/data/movies.json`: **10,000 real movies in 32 languages**, built from IMDb + Wikidata data
 
 ---
 
@@ -23,11 +23,14 @@ python app.py
 Then open **<http://127.0.0.1:5000>** in your browser. Flask serves both the API and the web page.
 Press `Ctrl + C` in the terminal to stop the server.
 
-Run the tests (from the `backend` folder):
+Run all tests (22 tests in the `tests` folder), from the `ai project` folder:
 
 ```powershell
-python -m unittest -v
+python tests/run_tests.py              # all tests
+python tests/run_tests.py rule_engine  # just one file: tests/test_rule_engine.py
 ```
+
+Or double-click `tests/run_tests.bat` in File Explorer.
 
 ---
 
@@ -38,19 +41,30 @@ ai project/
 ├── README.md               ← this file
 ├── plan.md                 ← detailed project plan
 ├── workdone.md             ← progress log
-├── backend/
+├── backend/                ← Python: the AI and the API
 │   ├── app.py              ← Flask app: REST API + serves the frontend
 │   ├── knowledge_base.py   ← AI concept 1: frames + semantic network
 │   ├── rule_engine.py      ← AI concept 2: forward chaining + IF-THEN constraint rules
-│   ├── heuristic.py        ← AI concept 3: heuristic scoring function (0–100)
+│   ├── heuristic.py        ← AI concept 3: heuristic scoring function (0–100) + weighted rating
 │   ├── recommender.py      ← AI concept 4: pipeline, relaxation, best-first selection, explanations
-│   ├── test_recommender.py ← 19 unit tests
+│   ├── build_dataset.py    ← one-time script that builds movies.json from IMDb + Wikidata
 │   ├── requirements.txt
-│   └── data/movies.json    ← the knowledge base
-└── frontend/
-    ├── index.html          ← page layout
-    ├── style.css           ← styling (responsive, light/dark)
-    └── script.js           ← calls the API and draws the results
+│   └── data/
+│       ├── movies.json         ← the knowledge base (10,000 movies)
+│       └── curated_movies.json ← 75 hand-tagged movies, always kept at the top
+├── frontend/               ← the web page (no build step)
+│   ├── index.html          ← page layout
+│   ├── style.css           ← styling (responsive, light/dark)
+│   └── script.js           ← calls the API and draws the results
+└── tests/                  ← all tests, separate from the app code
+    ├── run_tests.py        ← runs every test and prints a summary
+    ├── run_tests.bat       ← double-click on Windows to run all tests
+    ├── helpers.py          ← shared setup (import path, movies, prefs helper)
+    ├── test_knowledge_base.py
+    ├── test_rule_engine.py
+    ├── test_heuristic.py
+    ├── test_recommender.py
+    └── test_api.py
 ```
 
 ---
@@ -66,8 +80,8 @@ preferences → ① working memory → ② forward chaining → ③ constraint r
 
 ### Concept 1: Knowledge Representation (`knowledge_base.py`)
 
-- **Frames:** each movie is a structured record with slots:
-  `title, year, language, genres, moods, duration, rating`.
+- **Frames:** each of the 10,000 movies is a structured record with slots:
+  `title, year, language, genres, moods, duration, rating, votes, imdb_id`.
 - **Semantic network:** a small graph of related concepts, for example
   `Action — Thriller`, `Crime — Thriller`, `funny — feel-good`, `emotional — romantic`.
   This lets the system recognise a *near match* instead of treating it as a total miss.
@@ -111,7 +125,10 @@ A heuristic function `h(movie)` estimates how good a movie is for this user, fro
 
 - **Best-first selection:** every scored movie is pushed into a **priority queue** (`heapq`).
   The queue always pops the most promising movie first; we pop 5 times.
-  Priority = higher score → fewer broken rules → higher rating → title A–Z.
+  Priority = higher score → fewer broken rules → higher **weighted rating** → title A–Z.
+- **Weighted rating (tie-breaker):** with 10,000 movies, many score 100/100. Ties are broken with
+  IMDb's formula `WR = v/(v+m)·R + m/(v+m)·C` (R = rating, v = votes, m = 25,000, C = average rating).
+  A 9.4 rated by 3,000 people is trusted less than an 8.8 rated by 2 million.
 - **Constraint relaxation:** if fewer than 5 movies pass the hard rules, the system does not
   return an empty page. It relaxes the duration rule first, then the rating rule, and tells the
   user which rule it relaxed. Movies that break a relaxed rule lose points and are marked.
@@ -124,21 +141,24 @@ A heuristic function `h(movie)` estimates how good a movie is for this user, fro
 Preferences: genre **Any**, language **English**, mood **funny**, max **120 min**, rating **7.0–10**.
 
 1. Forward chaining fires **I2** → `genre = Comedy` (inferred).
-2. C1 flags 55 movies longer than 120 min; C2 flags 6 rated below 7.0 (some break both) → **18 of 75 movies pass**.
-3. Each of the 18 is scored. Toy Story: Comedy ✔ 30 + English ✔ 20 + funny ✔ 20 + 81 min ✔ 15 + 8.3 ✔ 15 = **100**.
-4. Several movies score 100, so the priority queue breaks ties by rating:
-   Toy Story (8.3), Inside Out (8.1), Paddington 2 (7.8), The Hangover (7.7), Superbad (7.6).
+2. C1 flags 3,789 movies longer than 120 min; C2 flags 5,160 rated below 7.0 (some break both)
+   → **2,638 of 10,000 movies pass**.
+3. Each of the 2,638 is scored. Toy Story: Comedy ✔ 30 + English ✔ 20 + funny ✔ 20 + 81 min ✔ 15 + 8.3 ✔ 15 = **100**.
+4. Many movies score 100, so the priority queue breaks ties with the weighted rating:
+   Back to the Future (8.5, 1.5M votes), Modern Times, City Lights, Toy Story, Toy Story 3.
 
-### Worked example 2: relaxation and partial credit
+### Worked example 2: relaxation
 
-Preferences: genre **Horror**, language **Korean**, mood **Any**, max **90 min**, rating **8.0–10**.
+Preferences: genre, language and mood **Any**, max **60 min**, rating **9.0–10** (the "Too strict" button).
 
-1. Forward chaining fires **I17** → `mood = scary`.
-2. Only **3** movies are ≤ 90 min and rated ≥ 8.0, so the system **relaxes C1** (duration).
-3. Tumbbad (Hindi, Horror, scary, 104 min, 8.2):
-   genre 30 + language 0 + mood 20 + duration 15 × (1 − 14/60) = 11.5 + rating 15 = **76.5**.
-4. Oldboy (Korean, Thriller): genre is *related* to Horror → 15, mood *thrilling* is related to scary → 10,
-   so it scores **67.5**.
+1. **No movie** is both ≤ 60 min and rated ≥ 9.0, so the system **relaxes C1** (duration).
+2. The Chaos Class (Turkish, 85 min, 9.1): genre 30 + language 20 + mood 20 +
+   duration 15 × (1 − 25/60) ≈ 8.7 + rating 15 = **93.7**. It is marked "breaks the relaxed rule".
+
+### Worked example 3: partial credit from the semantic network
+
+Preferences: genre **Action**. Kahaani (Thriller, Crime) has no Action, but Thriller is linked to Action
+in the semantic network, so it earns **15 of 30** genre points ("Its genre Thriller is closely related to Action").
 
 ---
 
@@ -148,7 +168,7 @@ Preferences: genre **Horror**, language **Korean**, mood **Any**, max **90 min**
 | --- | --- | --- |
 | GET | `/` | The web page |
 | GET | `/api/options` | Genres, languages, moods, weights, defaults |
-| GET | `/api/movies` | Full knowledge base |
+| GET | `/api/movies?search=&limit=100` | Knowledge base, filtered by title text (first 100 rows by default) |
 | POST | `/api/recommend` | Preferences in → top 5 + reasoning trace out |
 
 Example request:
@@ -168,7 +188,10 @@ Bad input (unknown genre, `min_rating > max_rating`, …) returns **HTTP 400** w
 
 ## 5. Customising
 
-- **Add a movie:** add an object to `backend/data/movies.json` (use only genres, moods and languages listed in `knowledge_base.py`). Restart the server.
+- **Add a movie:** add an object to `backend/data/curated_movies.json` and run `python build_dataset.py`,
+  or edit `backend/data/movies.json` directly. Use only genres, moods and languages listed in
+  `knowledge_base.py`, then restart the server.
+- **Rebuild the dataset:** `python build_dataset.py --target 10000` (downloads about 240 MB from IMDb the first time).
 - **Change importance:** edit `WEIGHTS` in `heuristic.py` (keep the total at 100).
 - **Add a rule:** add a line to `INFERENCE_RULES` or a function + entry to `CONSTRAINT_RULES` in `rule_engine.py`.
 - **Relate two genres/moods:** add a pair to `GENRE_LINKS` / `MOOD_LINKS` in `knowledge_base.py`.
@@ -198,6 +221,33 @@ chooses the next node to expand.
 Constraint relaxation: the least important hard rule becomes soft, the user is told, and the
 movies that break it are penalised and marked.
 
+**How were 10,000 movies tagged with moods? Was that ML?**
+No. IMDb gives each film up to 3 genres, and `build_dataset.py` turns them into moods with simple
+IF-THEN rules (IF Comedy THEN funny, IF Horror THEN scary, IF Biography THEN inspiring …).
+The 75 hand-tagged movies keep their hand-picked moods.
+
 **Limitations?**
-The rules and weights are hand-made, the dataset is small, and the system does not learn from user history.
-These are exactly the trade-offs of rule-based AI compared with ML.
+The rules and weights are hand-made, moods are derived from genres (so they are approximate),
+and the system does not learn from user history. These are exactly the trade-offs of rule-based AI compared with ML.
+
+---
+
+## 7. Where the Data Comes From
+
+`backend/build_dataset.py` builds `movies.json` in five steps:
+
+1. **IMDb datasets** (<https://datasets.imdbws.com/>): every feature film with at least 2,500 votes,
+   a runtime of 40–300 minutes and known genres (documentaries and adult titles removed) gives 27,871 films.
+2. **Wikidata** (CC0, public domain): each film's original language, looked up by its IMDb id.
+   When several languages are listed, three rules pick one: a film whose original title differs from its
+   English title is probably not English; otherwise English wins if listed; otherwise the main listed language.
+   A few well-known films are corrected by hand (`LANGUAGE_FIXES`).
+3. **Genre and mood rules:** IMDb's genres are mapped to our 11 genres (Mystery → Thriller, Biography → Drama …)
+   and moods are derived by IF-THEN rules (Comedy → funny, Horror → scary, Sport → inspiring …).
+4. **Selection:** the most-voted films of every language first (900 Hindi, 450 each Tamil/Telugu/Malayalam,
+   200 for other languages, where available), then the most-voted films overall, up to 10,000.
+5. **Hand-tagged movies:** the 75 movies in `curated_movies.json` stay at the top with their hand-picked
+   moods, and get fresh IMDb ratings and vote counts.
+
+Ratings and votes are a snapshot from 17 October 2026. IMDb's datasets are for **personal and
+non-commercial use** only, which covers a college project.

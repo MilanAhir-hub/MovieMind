@@ -123,6 +123,23 @@ def score_rating(movie, prefs):
     return criterion("rating", points, status, f"Rated {rating}/10, outside your {low:.1f}-{high:.1f} range")
 
 
+VOTES_NEEDED = 25000     # "m" in IMDb's weighted-rating formula
+
+
+def weighted_rating(movie, average_rating):
+    """
+    IMDb's weighted (Bayesian) rating, used to break ties between equal scores.
+
+        WR = v/(v+m) * R  +  m/(v+m) * C
+        R = movie rating, v = its votes, m = VOTES_NEEDED, C = average rating of all movies
+
+    A rating backed by few votes is pulled towards the average, so a 9.4 from
+    3,000 votes does not outrank an 8.8 from 2 million votes.
+    """
+    votes = movie.get("votes", 0)
+    return (votes * movie["rating"] + VOTES_NEEDED * average_rating) / (votes + VOTES_NEEDED)
+
+
 def score_movie(movie, prefs, inferred=()):
     """
     The heuristic evaluation function h(movie) -> 0..100.

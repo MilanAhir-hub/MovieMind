@@ -14,7 +14,7 @@ This module runs the whole AI pipeline for one request:
 
 import heapq
 
-from heuristic import FULL, NONE, PARTIAL, score_movie
+from heuristic import FULL, NONE, PARTIAL, score_movie, weighted_rating
 from knowledge_base import ANY, GENRES, LANGUAGES, MOODS
 from rule_engine import (CONSTRAINT_BY_ID, CONSTRAINT_RULES, broken_constraints,
                          forward_chain, rule_to_text)
@@ -78,21 +78,22 @@ def allowed_movies(movies, broken, active_rules):
 # ---------------------------------------------------------------------------
 # Step 6: best-first selection with a priority queue
 # ---------------------------------------------------------------------------
-def best_first_select(scored, k):
+def best_first_select(scored, k, average_rating):
     """
     Push every scored movie into a min-heap (priority queue) and pop the best k.
 
     Priority, best first:
       1. highest heuristic score
       2. fewest broken (relaxed) rules  -> on equal scores, rule-abiding movies win
-      3. highest rating                  -> next tie-breaker
+      3. highest weighted rating         -> IMDb formula: a well-trusted rating wins ties
       4. title A-Z, then id              -> makes the order fully predictable
     Python's heapq pops the smallest value, so "higher is better" values are negated.
     """
     frontier = []
     for item in scored:
         movie = item["movie"]
-        priority = (-item["score"], len(item["broken_rules"]), -movie["rating"], movie["title"], movie["id"])
+        trust = weighted_rating(movie, average_rating)
+        priority = (-item["score"], len(item["broken_rules"]), -trust, movie["title"], movie["id"])
         heapq.heappush(frontier, (priority, item))
 
     selected = []
@@ -204,7 +205,8 @@ def recommend(prefs, movies, top_k=TOP_K):
                        "broken_rules": broken[movie["id"]]})
 
     # Step 6: best-first selection
-    top = best_first_select(scored, top_k)
+    average_rating = sum(movie["rating"] for movie in movies) / len(movies)
+    top = best_first_select(scored, top_k, average_rating)
 
     # Step 7: explanations
     recommendations = [build_recommendation(rank, item) for rank, item in enumerate(top, start=1)]
@@ -212,7 +214,8 @@ def recommend(prefs, movies, top_k=TOP_K):
     relaxation_message = None
     if relaxed_rules:
         names = join_words([f"{CONSTRAINT_BY_ID[r]['name']} ({r})" for r in relaxed_rules])
-        relaxation_message = (f"Only {passed_all_rules} movie(s) passed every rule, so the system relaxed "
+        passed = f"Only {passed_all_rules} movie(s)" if passed_all_rules else "No movie"
+        relaxation_message = (f"{passed} passed every rule, so the system relaxed "
                               f"the {names} rule. Movies that break a relaxed rule lose points "
                               f"and are marked on their card.")
 

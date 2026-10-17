@@ -3,9 +3,9 @@ knowledge_base.py  —  AI Concept 1: KNOWLEDGE REPRESENTATION
 
 The system's knowledge is stored in two forms:
 
-1. FRAMES (movies.json)
+1. FRAMES (movies.json, 10,000 movies built by build_dataset.py)
    Every movie is a frame: a structured record of slots (attributes) and values.
-       title, year, language, genres, moods, duration, rating
+       title, year, language, genres, moods, duration, rating, votes, imdb_id
 
 2. SEMANTIC NETWORK (GENRE_LINKS and MOOD_LINKS below)
    A small graph that links related concepts, for example Action <-> Thriller.
@@ -26,7 +26,11 @@ ANY = "Any"   # the value used when the user has no preference
 GENRES = ["Action", "Adventure", "Animation", "Comedy", "Crime", "Drama",
           "Fantasy", "Horror", "Romance", "Sci-Fi", "Thriller"]
 
-LANGUAGES = ["English", "Hindi", "Tamil", "Telugu", "Malayalam", "Korean", "Japanese"]
+LANGUAGES = ["English", "Hindi", "Tamil", "Telugu", "Malayalam", "Kannada", "Bengali",
+             "Arabic", "Cantonese", "Danish", "Dutch", "Finnish", "French", "German", "Greek",
+             "Hungarian", "Indonesian", "Italian", "Japanese", "Korean", "Mandarin", "Norwegian",
+             "Persian", "Polish", "Portuguese", "Romanian", "Russian", "Serbian", "Spanish",
+             "Swedish", "Thai", "Turkish"]
 
 MOODS = ["action-packed", "funny", "emotional", "thrilling", "romantic",
          "inspiring", "scary", "mind-bending", "feel-good"]

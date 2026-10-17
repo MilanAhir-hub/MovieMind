@@ -18,10 +18,17 @@
 | 7 | Frontend: form, result cards, reasoning trace, knowledge base table | ✅ | `frontend/index.html`, `style.css`, `script.js` |
 | 8 | Testing: 19 unit tests + live API + browser screenshots | ✅ | `backend/test_recommender.py` |
 | 9 | Documentation: setup, algorithm explanation, viva Q&A | ✅ | `README.md` |
+| 10 | Code pushed to GitHub | ✅ | <https://github.com/YashParmar081005/ai-collage-project> |
 
 ---
 
 ## Log
+
+### 2026-10-17 — Published to GitHub
+
+- Initialised a git repo in the `ai project` folder (branch `main`) and added a `.gitignore` that excludes `__pycache__` and editor files.
+- Pushed all code and docs to <https://github.com/YashParmar081005/ai-collage-project>.
+- To push future changes: `git add .` → `git commit -m "message"` → `git push`.
 
 ### 2026-10-17 — Version 1.0 built end to end
 

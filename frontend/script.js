@@ -19,7 +19,7 @@ const EXAMPLES = {
   hindiAction: { genre: "Action", language: "Hindi", mood: "action-packed", max_duration: 160, min_rating: 7, max_rating: 10 },
   funnyShort:  { genre: "Any", language: "English", mood: "funny", max_duration: 120, min_rating: 7, max_rating: 10 },
   anyScary:    { genre: "Any", language: "Any", mood: "scary", max_duration: 180, min_rating: 6, max_rating: 10 },
-  strict:      { genre: "Horror", language: "Korean", mood: "Any", max_duration: 90, min_rating: 8, max_rating: 10 },
+  strict:      { genre: "Any", language: "Any", mood: "Any", max_duration: 60, min_rating: 9, max_rating: 10 },
 };
 
 let options = null;   // filled from GET /api/options
@@ -40,6 +40,13 @@ function capitalize(text) {
 
 function formatRating(rating) {
   return Number(rating).toFixed(1);   // 9 -> "9.0"
+}
+
+function formatVotes(votes) {
+  if (!votes) return "";
+  if (votes >= 1e6) return `${(votes / 1e6).toFixed(1)}M`;   // 2950000 -> "3.0M"
+  if (votes >= 1e3) return `${Math.round(votes / 1e3)}K`;    // 45210   -> "45K"
+  return String(votes);
 }
 
 async function getJson(path, init) {
@@ -131,6 +138,11 @@ function renderCard(movie) {
       </li>`)
     .join("");
 
+  const votes = movie.votes ? ` (${formatVotes(movie.votes)} votes)` : "";
+  const imdbLink = movie.imdb_id
+    ? ` &middot; <a href="https://www.imdb.com/title/${escapeHtml(movie.imdb_id)}/" target="_blank" rel="noopener">IMDb</a>`
+    : "";
+
   const relaxed = movie.relaxed_rules.length
     ? `<div class="relaxed-note">Breaks the relaxed rule: ${movie.relaxed_rules
         .map((r) => `${escapeHtml(r.name)} (${r.id})`).join(", ")}</div>`
@@ -142,7 +154,7 @@ function renderCard(movie) {
         <span class="rank">#${movie.rank}</span>
         <div>
           <h3>${escapeHtml(movie.title)} <span class="year">${movie.year}</span></h3>
-          <p class="meta">${escapeHtml(movie.language)} &middot; ${movie.duration} min &middot; &#9733; ${formatRating(movie.rating)}/10</p>
+          <p class="meta">${escapeHtml(movie.language)} &middot; ${movie.duration} min &middot; &#9733; ${formatRating(movie.rating)}/10${votes}${imdbLink}</p>
           <div class="chips">${chips}</div>
         </div>
         <div class="score-ring" style="--pct:${movie.score}" title="Match score">
@@ -181,8 +193,10 @@ function renderTrace(trace) {
       `<p>Facts after inference:</p><div class="facts">${factChips(trace.inferred_preferences, inferredKeys)}</div>`
     : "<p>No inference rule fired: nothing needed to be inferred from your preferences.</p>";
 
+  const n = (number) => number.toLocaleString();   // 10000 -> "10,000"
+
   const constraintHtml = trace.constraints
-    .map((c) => `<code class="rule">${c.id}: ${escapeHtml(c.text)} &rarr; ${c.excluded} movie(s)${
+    .map((c) => `<code class="rule">${c.id}: ${escapeHtml(c.text)} &rarr; ${n(c.excluded)} movie(s)${
       c.relaxed ? '<span class="tag">relaxed</span>' : ""}</code>`)
     .join("");
 
@@ -191,21 +205,22 @@ function renderTrace(trace) {
 
   const steps = [
     ["Knowledge representation",
-      `<p>${trace.total_movies} movies are stored as frames (title, genres, language, moods, duration, rating),
-       plus a semantic network of related genres and moods.</p>`],
+      `<p>${n(trace.total_movies)} movies are stored as frames (title, genres, language, moods, duration,
+       rating, votes), plus a semantic network of related genres and moods.</p>`],
     ["Working memory",
       `<p>Your preferences became the starting facts:</p>
        <div class="facts">${factChips(trace.preferences, [])}</div>`],
     ["Forward chaining (inference rules)", inferenceHtml],
     ["Constraint rules (IF-THEN filters)",
-      `${constraintHtml}<p>${trace.passed_all_rules} of ${trace.total_movies} movies passed every rule.</p>`],
+      `${constraintHtml}<p>${n(trace.passed_all_rules)} of ${n(trace.total_movies)} movies passed every rule.</p>`],
     ["Constraint relaxation",
       `<p>${escapeHtml(trace.relaxation_message || `Not needed: at least ${options.top_k} movies passed every rule.`)}</p>`],
     ["Heuristic evaluation",
-      `<p>${trace.candidates} candidate movies were scored out of 100 (weights: ${weights}).
+      `<p>${n(trace.candidates)} candidate movies were scored out of 100 (weights: ${weights}).
        Related genres and moods earn half points.</p>`],
     ["Best-first selection",
-      `<p>All candidates went into a priority queue ordered by score, then fewest broken rules, then rating.
+      `<p>All candidates went into a priority queue ordered by score, then fewest broken rules, then
+       IMDb's weighted rating (a rating backed by more votes is trusted more).
        The top ${trace.selected} were popped and are shown above.</p>`],
   ];
 
@@ -234,7 +249,7 @@ async function recommend(event) {
     if (data.trace.relaxation_message) {
       showStatus("warn", `<strong>Filters relaxed.</strong> ${escapeHtml(data.trace.relaxation_message)}`);
     } else {
-      showStatus("", `Top ${data.recommendations.length} of <strong>${data.trace.candidates}</strong>
+      showStatus("", `Top ${data.recommendations.length} of <strong>${data.trace.candidates.toLocaleString()}</strong>
         movies that passed your rules. Scores are out of 100.`);
     }
   } catch (error) {
@@ -244,32 +259,47 @@ async function recommend(event) {
   }
 }
 
-// ---------- knowledge base table ----------
+// ---------- knowledge base table (searchable, 100 rows at a time) ----------
 let kbLoaded = false;
+let searchTimer = null;
 
 async function loadKnowledgeBase() {
+  const search = $("kb-search").value.trim();
+  try {
+    const data = await getJson(`/api/movies?limit=100&search=${encodeURIComponent(search)}`);
+    $("kb-info").textContent = search
+      ? `${data.matches.toLocaleString()} match(es), showing ${data.movies.length}`
+      : `Showing the first ${data.movies.length} of ${data.total.toLocaleString()}. Type to search.`;
+    $("kb-body").innerHTML = data.movies.length
+      ? data.movies
+          .map((m) => `
+            <tr>
+              <td>${m.id}</td>
+              <td>${escapeHtml(m.title)}</td>
+              <td>${m.year}</td>
+              <td>${escapeHtml(m.language)}</td>
+              <td>${escapeHtml(m.genres.join(", "))}</td>
+              <td>${escapeHtml(m.moods.join(", "))}</td>
+              <td>${m.duration}</td>
+              <td>${formatRating(m.rating)}</td>
+              <td>${formatVotes(m.votes)}</td>
+            </tr>`)
+          .join("")
+      : `<tr><td colspan="9">No movie title contains "${escapeHtml(search)}".</td></tr>`;
+  } catch (error) {
+    $("kb-body").innerHTML = `<tr><td colspan="9">Could not load: ${escapeHtml(error.message)}</td></tr>`;
+  }
+}
+
+function openKnowledgeBase() {
   if (kbLoaded || !$("kb").open) return;
   kbLoaded = true;
-  try {
-    const movies = await getJson("/api/movies");
-    $("kb-count").textContent = `(${movies.length} movies)`;
-    $("kb-body").innerHTML = movies
-      .map((m) => `
-        <tr>
-          <td>${m.id}</td>
-          <td>${escapeHtml(m.title)}</td>
-          <td>${m.year}</td>
-          <td>${escapeHtml(m.language)}</td>
-          <td>${escapeHtml(m.genres.join(", "))}</td>
-          <td>${escapeHtml(m.moods.join(", "))}</td>
-          <td>${m.duration}</td>
-          <td>${formatRating(m.rating)}</td>
-        </tr>`)
-      .join("");
-  } catch (error) {
-    kbLoaded = false;
-    $("kb-body").innerHTML = `<tr><td colspan="8">Could not load: ${escapeHtml(error.message)}</td></tr>`;
-  }
+  loadKnowledgeBase();
+}
+
+function searchKnowledgeBase() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(loadKnowledgeBase, 250);   // wait until the user pauses typing
 }
 
 // ---------- start-up ----------
@@ -287,13 +317,18 @@ async function init() {
   fillSelect($("mood"), options.moods, "Any mood");
   renderWeights(options.weights);
   updateOutputs();
+  $("kb-count").textContent = `(${options.movie_count.toLocaleString()} movies)`;
+  showStatus("", `Choose your preferences and press <strong>Recommend movies</strong>.
+    The knowledge base holds <strong>${options.movie_count.toLocaleString()}</strong> movies
+    in ${options.languages.length} languages.`);
 
   $("prefs-form").addEventListener("submit", recommend);
   $("prefs-form").addEventListener("reset", () => setTimeout(updateOutputs));   // after the browser resets values
   $("max_duration").addEventListener("input", updateOutputs);
   $("min_rating").addEventListener("input", keepRatingOrder);
   $("max_rating").addEventListener("input", keepRatingOrder);
-  $("kb").addEventListener("toggle", loadKnowledgeBase);
+  $("kb").addEventListener("toggle", openKnowledgeBase);
+  $("kb-search").addEventListener("input", searchKnowledgeBase);
 
   document.querySelectorAll("[data-example]").forEach((button) => {
     button.addEventListener("click", () => {

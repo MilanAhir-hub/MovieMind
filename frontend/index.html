@@ -104,10 +104,14 @@
     <details id="kb" class="panel kb">
       <summary>Knowledge base <span id="kb-count"></span></summary>
       <p class="muted">Every movie is a <em>frame</em>: a record of slots and values. This is all the knowledge the system has.</p>
+      <div class="kb-tools">
+        <input type="search" id="kb-search" placeholder="Search by title…" aria-label="Search movies by title">
+        <span id="kb-info" class="muted"></span>
+      </div>
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>#</th><th>Title</th><th>Year</th><th>Language</th><th>Genres</th><th>Moods</th><th>Min</th><th>Rating</th></tr>
+            <tr><th>#</th><th>Title</th><th>Year</th><th>Language</th><th>Genres</th><th>Moods</th><th>Min</th><th>Rating</th><th>Votes</th></tr>
           </thead>
           <tbody id="kb-body"></tbody>
         </table>

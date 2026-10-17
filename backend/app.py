@@ -7,7 +7,7 @@ Open:  http://127.0.0.1:5000
 Endpoints
     GET  /               the web page (frontend/index.html)
     GET  /api/options    genres, languages, moods and scoring weights for the form
-    GET  /api/movies     the whole knowledge base
+    GET  /api/movies     the knowledge base (?search=title text, ?limit=rows, default 100)
     POST /api/recommend  preferences in, top-5 recommendations + reasoning trace out
 """
 
@@ -51,12 +51,20 @@ def options():
         "weights": WEIGHTS,
         "defaults": DEFAULT_PREFERENCES,
         "top_k": TOP_K,
+        "movie_count": len(MOVIES),
     })
 
 
 @app.get("/api/movies")
 def movies():
-    return jsonify(MOVIES)
+    search = request.args.get("search", "").strip().lower()
+    limit = request.args.get("limit", default=100, type=int)
+    matches = [m for m in MOVIES if search in m["title"].lower()] if search else MOVIES
+    return jsonify({
+        "total": len(MOVIES),
+        "matches": len(matches),
+        "movies": matches[:max(0, limit)],
+    })
 
 
 @app.post("/api/recommend")

@@ -5,6 +5,9 @@ __pycache__/
 venv/
 .env
 
+# Raw IMDb / Wikidata downloads used by build_dataset.py
+backend/data/raw/
+
 # Editors / OS
 .vscode/
 .idea/

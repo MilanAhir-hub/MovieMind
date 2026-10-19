@@ -14,17 +14,18 @@ export default function Navbar({ movieCount, onOpenPrefs }) {
 
           {/* Desktop Navigation Links */}
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-            <a
-              href="#prefs-section"
-              className="nav-link active"
+            <button
+              type="button"
+              className="nav-link active cursor-pointer bg-transparent border-none p-0 text-sm font-medium"
               onClick={e => {
+                e.preventDefault();
                 if (onOpenPrefs) {
                   onOpenPrefs();
                 }
               }}
             >
               Matcher
-            </a>
+            </button>
             <a href="#results-section" className="nav-link">Top Recommendations</a>
             <a href="#trace" className="nav-link">How AI Works</a>
             <a href="#kb" className="nav-link">Catalog (10k)</a>
@@ -39,12 +40,13 @@ export default function Navbar({ movieCount, onOpenPrefs }) {
           </div>
 
           <Button
-            href="#prefs-section"
+            type="button"
             variant="primary"
             size="md"
             rounded="full"
-            className="hidden sm:inline-flex"
+            className="inline-flex"
             onClick={e => {
+              if (e && e.preventDefault) e.preventDefault();
               if (onOpenPrefs) {
                 onOpenPrefs();
               }

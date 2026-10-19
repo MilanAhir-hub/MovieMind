@@ -26,11 +26,17 @@ ANY = "Any"   # the value used when the user has no preference
 GENRES = ["Action", "Adventure", "Animation", "Comedy", "Crime", "Drama",
           "Fantasy", "Horror", "Romance", "Sci-Fi", "Thriller"]
 
-LANGUAGES = ["English", "Hindi", "Tamil", "Telugu", "Malayalam", "Kannada", "Bengali",
-             "Arabic", "Cantonese", "Danish", "Dutch", "Finnish", "French", "German", "Greek",
-             "Hungarian", "Indonesian", "Italian", "Japanese", "Korean", "Mandarin", "Norwegian",
-             "Persian", "Polish", "Portuguese", "Romanian", "Russian", "Serbian", "Spanish",
-             "Swedish", "Thai", "Turkish"]
+LANGUAGES = [
+    "Arabic", "Armenian", "Azerbaijani", "Bengali", "Bulgarian", "Cantonese",
+    "Catalan", "Czech", "Danish", "Dutch", "Dzongkha", "English", "Estonian",
+    "Finnish", "French", "German", "Greek", "Haitian", "Hebrew", "Hindi",
+    "Hungarian", "Icelandic", "Indonesian", "Irish", "Italian", "Japanese",
+    "Kalaallisut", "Kannada", "Kazakh", "Khmer", "Kirghiz", "Korean",
+    "Latvian", "Lithuanian", "Macedonian", "Malayalam", "Mandarin", "Maori",
+    "Mongolian", "Norwegian", "Other", "Persian", "Polish", "Portuguese",
+    "Romanian", "Russian", "Serbian", "Spanish", "Swedish", "Tagalog",
+    "Tamil", "Telugu", "Thai", "Turkish", "Ukrainian", "Urdu", "Vietnamese", "Zulu"
+]
 
 MOODS = ["action-packed", "funny", "emotional", "thrilling", "romantic",
          "inspiring", "scary", "mind-bending", "feel-good"]

@@ -19,7 +19,7 @@ from knowledge_base import ANY, GENRES, LANGUAGES, MOODS
 from rule_engine import (CONSTRAINT_BY_ID, CONSTRAINT_RULES, broken_constraints,
                          forward_chain, rule_to_text)
 
-TOP_K = 5
+TOP_K = 10
 
 # When the user's filters are too strict, relax rules in this order.
 # Duration goes first: a movie that is a bit too long is easier to accept

@@ -11,14 +11,18 @@ class HeuristicTests(unittest.TestCase):
         self.assertEqual(sum(WEIGHTS.values()), 100)
 
     def test_perfect_match_scores_100(self):
-        kaithi = BY_TITLE[("Kaithi", "Tamil")]
-        score, _ = score_movie(kaithi, prefs(genre="Action", language="Tamil", mood="action-packed",
+        sample = BY_TITLE.get(("Kaithi", "Tamil")) or next(
+            m for m in MOVIES if m["language"] == "Tamil" and "Action" in m["genres"] and "action-packed" in m["moods"] and m["rating"] >= 7
+        )
+        score, _ = score_movie(sample, prefs(genre="Action", language="Tamil", mood="action-packed",
                                              min_rating=7))
         self.assertEqual(score, 100)
 
     def test_related_genre_gets_half_points(self):
-        kahaani = BY_TITLE[("Kahaani", "Hindi")]           # Thriller, Crime (no Action)
-        _, breakdown = score_movie(kahaani, prefs(genre="Action"))
+        sample = BY_TITLE.get(("Kahaani", "Hindi")) or next(
+            m for m in MOVIES if "Thriller" in m["genres"] and "Action" not in m["genres"]
+        )
+        _, breakdown = score_movie(sample, prefs(genre="Action"))
         genre = breakdown[0]
         self.assertEqual(genre["status"], "partial")
         self.assertEqual(genre["points"], WEIGHTS["genre"] / 2)

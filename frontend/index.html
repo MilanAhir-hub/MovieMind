@@ -1,128 +1,17 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="MovieMind is a premium, Netflix-inspired movie recommendation system powered by symbolic AI, rule-based reasoning, and multi-criteria heuristic scoring.">
+  <meta name="theme-color" content="#000000">
   <title>MovieMind — AI Movie Recommender</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cinzel:wght@600;700;800;900&family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
 </head>
 <body>
-
-  <header class="hero">
-    <div class="wrap">
-      <p class="eyebrow">Traditional AI &middot; No machine learning</p>
-      <h1>MovieMind</h1>
-      <p class="tagline">
-        Tell us what you feel like watching. A rule-based reasoning engine and a heuristic
-        scoring function pick your top 5 movies and explain every decision.
-      </p>
-      <ul class="concepts">
-        <li>Knowledge Representation</li>
-        <li>Rule-Based Reasoning</li>
-        <li>Heuristic Evaluation</li>
-        <li>Best-First Selection</li>
-      </ul>
-    </div>
-  </header>
-
-  <main class="wrap layout">
-
-    <!-- ===== Preference form ===== -->
-    <section class="panel form-panel" aria-labelledby="prefs-title">
-      <h2 id="prefs-title">Your preferences</h2>
-
-      <form id="prefs-form">
-        <label class="field">
-          <span>Genre</span>
-          <select id="genre"></select>
-        </label>
-
-        <label class="field">
-          <span>Language</span>
-          <select id="language"></select>
-        </label>
-
-        <label class="field">
-          <span>Mood</span>
-          <select id="mood"></select>
-        </label>
-
-        <label class="field">
-          <span>Maximum duration <output id="duration-out">180 min</output></span>
-          <input type="range" id="max_duration" min="60" max="240" step="5" value="180">
-        </label>
-
-        <div class="field">
-          <span>Rating range <output id="rating-out">6.0 – 10.0</output></span>
-          <label class="slider-row">
-            <small>Min</small>
-            <input type="range" id="min_rating" min="0" max="10" step="0.5" value="6">
-          </label>
-          <label class="slider-row">
-            <small>Max</small>
-            <input type="range" id="max_rating" min="0" max="10" step="0.5" value="10">
-          </label>
-        </div>
-
-        <button type="submit" class="btn-primary" id="submit-btn">Recommend movies</button>
-        <button type="reset" class="btn-link" id="reset-btn">Reset</button>
-      </form>
-
-      <div class="examples">
-        <h3>Quick examples</h3>
-        <div class="example-buttons">
-          <button type="button" data-example="hindiAction">Hindi action</button>
-          <button type="button" data-example="funnyShort">Funny &amp; under 2 h</button>
-          <button type="button" data-example="anyScary">Something scary</button>
-          <button type="button" data-example="strict">Too strict (relaxation)</button>
-        </div>
-      </div>
-
-      <div class="weights">
-        <h3>Heuristic weights</h3>
-        <ul id="weights-list"></ul>
-      </div>
-    </section>
-
-    <!-- ===== Results ===== -->
-    <section class="results-panel" aria-live="polite">
-      <div id="status" class="status">
-        Choose your preferences and press <strong>Recommend movies</strong>.
-      </div>
-
-      <div id="results" class="cards"></div>
-
-      <details id="trace" class="panel trace" open hidden>
-        <summary>How the AI decided</summary>
-        <ol id="trace-steps" class="trace-steps"></ol>
-      </details>
-    </section>
-  </main>
-
-  <!-- ===== Knowledge base viewer ===== -->
-  <section class="wrap">
-    <details id="kb" class="panel kb">
-      <summary>Knowledge base <span id="kb-count"></span></summary>
-      <p class="muted">Every movie is a <em>frame</em>: a record of slots and values. This is all the knowledge the system has.</p>
-      <div class="kb-tools">
-        <input type="search" id="kb-search" placeholder="Search by title…" aria-label="Search movies by title">
-        <span id="kb-info" class="muted"></span>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>#</th><th>Title</th><th>Year</th><th>Language</th><th>Genres</th><th>Moods</th><th>Min</th><th>Rating</th><th>Votes</th></tr>
-          </thead>
-          <tbody id="kb-body"></tbody>
-        </table>
-      </div>
-    </details>
-  </section>
-
-  <footer class="wrap footer">
-    AI Subject Project &middot; Movie Recommendation System using rule-based reasoning and heuristic scoring &middot; Python Flask + HTML/CSS/JS
-  </footer>
-
-  <script src="script.js"></script>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
